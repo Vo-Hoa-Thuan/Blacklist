@@ -1,0 +1,12 @@
+{
+  "api_key": "cd9bfde0-fd2f-4790-a0a2-98c781ccc173",
+  "ip_list": [],
+  "auto_interval_minutes": 10,
+  "auto_check_enabled": false,
+  "smtp_host": "",
+  "smtp_port": 587,
+  "smtp_username": "",
+  "smtp_password": "",
+  "smtp_recipient": "vohoathuan.82004@gmail.com",
+  "smtp_use_tls": true
+}

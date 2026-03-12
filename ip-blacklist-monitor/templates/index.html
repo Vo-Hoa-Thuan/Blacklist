@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IP Blacklist Monitor</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="header">
+  <div class="header-left">
+    <span class="logo">🛡 IP Blacklist Monitor</span>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-ghost" onclick="openEmailModal()">📧 Cài SMTP</button>
+  </div>
+</header>
+
+<!-- ═══════════════ MAIN TABS ═══════════════ -->
+<div class="main-tabs">
+  <button class="tab-btn active" onclick="switchTab('monitor')">🖥 Monitor</button>
+  <button class="tab-btn" onclick="switchTab('charts')">📊 Biểu đồ</button>
+</div>
+
+<!-- ═══════════════ MONITOR TAB ═══════════════ -->
+<div id="tab-monitor" class="tab-content active">
+  <div class="layout">
+
+    <!-- ── LEFT PANEL ── -->
+    <aside class="left-panel">
+
+      <!-- API Key -->
+      <div class="card">
+        <div class="card-title">🔑 API Key MXToolbox</div>
+        <div class="input-group">
+          <input type="password" id="inp-api-key" class="input" placeholder="Nhập API Key...">
+          <button class="btn btn-icon" onclick="toggleApiKey()" title="Hiện/ẩn">👁</button>
+        </div>
+      </div>
+
+      <!-- IP List -->
+      <div class="card">
+        <div class="card-title">🌐 Danh sách IP (mỗi dòng 1 IP)</div>
+        <textarea id="inp-ips" class="textarea" rows="8"
+          placeholder="Nhập địa chỉ IPv4..&#10;Ví dụ:&#10;1.1.1.1&#10;8.8.8.8"></textarea>
+        <div class="row gap-6 mt-6">
+          <button class="btn btn-ghost flex-1" onclick="addSampleIPs()">+ IP Mẫu</button>
+          <button class="btn btn-danger flex-1" onclick="document.getElementById('inp-ips').value=''">Xóa hết</button>
+        </div>
+        <button class="btn btn-primary w-full mt-8" id="btn-check" onclick="startCheck()">
+          🔍 Kiểm tra ngay
+        </button>
+      </div>
+
+      <!-- Auto Scheduler -->
+      <div class="card">
+        <div class="card-title">⏱ Tự động kiểm tra</div>
+        <div class="row gap-6 mb-8">
+          <label class="muted" style="white-space:nowrap;align-self:center">Chu kỳ:</label>
+          <select id="sel-interval" class="select" onchange="saveConfig()">
+            <option value="1">1 phút</option>
+            <option value="5">5 phút</option>
+            <option value="10" selected>10 phút</option>
+            <option value="30">30 phút</option>
+            <option value="60">60 phút</option>
+          </select>
+        </div>
+        <div class="row gap-6">
+          <button class="btn btn-success flex-1" id="btn-auto-start" onclick="startAuto()">▶ Start Auto</button>
+          <button class="btn btn-danger flex-1" id="btn-auto-stop" onclick="stopAuto()" disabled>⏹ Stop</button>
+        </div>
+        <div id="auto-status" class="muted mt-8" style="font-size:12px">⏹ Đã dừng</div>
+        <div id="lbl-last" class="muted" style="font-size:12px">Lần cuối: —</div>
+        <div id="lbl-next" class="muted" style="font-size:12px">Lần tiếp: —</div>
+      </div>
+
+      <!-- Export -->
+      <div class="row gap-6">
+        <button class="btn btn-ghost flex-1" onclick="exportCSV()">⬇ Xuất CSV</button>
+        <button class="btn btn-ghost flex-1" onclick="exportJSON()">💾 Lưu JSON</button>
+      </div>
+
+    </aside>
+
+    <!-- ── RIGHT PANEL ── -->
+    <main class="right-panel">
+
+      <!-- Results Table -->
+      <div class="card no-pad">
+        <div class="table-header">
+          <span class="card-title" style="margin:0">📊 Kết quả kiểm tra</span>
+          <span id="lbl-checking" class="muted" style="font-size:12px"></span>
+        </div>
+        <div class="table-wrap">
+          <table id="result-table">
+            <thead>
+              <tr>
+                <th>IP</th><th>Tổng BL</th><th>BL Lớn</th><th>BL Khác</th>
+                <th>Risk Level</th><th>Thời gian</th><th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="result-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detail Panel -->
+      <div class="card" id="detail-panel" style="margin-top:12px">
+        <div class="row mb-8">
+          <span class="card-title" style="margin:0">🔎 Chi tiết IP:</span>
+          <span id="lbl-detail-ip" class="muted ml-8">(Chọn 1 dòng trong bảng)</span>
+        </div>
+        <div class="detail-tabs">
+          <button class="dtab-btn active" onclick="switchDetail('blacklists', this)">Blacklists bị dính</button>
+          <button class="dtab-btn" onclick="switchDetail('json', this)">Raw JSON</button>
+        </div>
+        <div id="dtab-blacklists" class="detail-content active">
+          <table id="bl-table">
+            <thead>
+              <tr><th>Tên Blacklist</th><th>Mã Info</th><th>Link tham khảo</th></tr>
+            </thead>
+            <tbody id="bl-tbody"></tbody>
+          </table>
+        </div>
+        <div id="dtab-json" class="detail-content">
+          <pre id="detail-json" class="json-pre"></pre>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── LOG PANEL ── -->
+  <div class="log-panel">
+    <div class="row mb-6">
+      <span class="card-title" style="margin:0">📋 Log hoạt động</span>
+      <div class="row gap-6 ml-auto">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('log-box').innerHTML=''">Xóa log</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportLog()">Xuất log</button>
+      </div>
+    </div>
+    <div id="log-box" class="log-box"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ CHARTS TAB ═══════════════ -->
+<div id="tab-charts" class="tab-content">
+  <div class="charts-grid">
+    <div class="card chart-card">
+      <div class="card-title">📊 Blacklist theo IP</div>
+      <canvas id="chart-bar"></canvas>
+    </div>
+    <div class="card chart-card">
+      <div class="card-title">🍩 Tỷ lệ Risk Level</div>
+      <canvas id="chart-pie"></canvas>
+    </div>
+    <div class="card chart-card chart-wide">
+      <div class="row mb-8">
+        <div class="card-title" style="margin:0">📈 Lịch sử theo thời gian</div>
+        <div class="row gap-6 ml-auto">
+          <label class="muted" style="align-self:center;font-size:12px">IP:</label>
+          <select id="sel-chart-ip" class="select select-sm" onchange="drawLineChart()"></select>
+        </div>
+      </div>
+      <canvas id="chart-line"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ EMAIL MODAL ═══════════════ -->
+<div id="email-modal" class="modal-overlay" onclick="closeEmailModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span>⚙ Cấu hình Email SMTP</span>
+      <button class="btn btn-icon" onclick="closeEmailModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="card mb-12">
+        <div class="card-title">📡 Máy chủ SMTP</div>
+        <div class="form-row"><label>SMTP Host</label><input class="input" id="smtp-host" placeholder="smtp.gmail.com"></div>
+        <div class="form-row"><label>SMTP Port</label><input class="input" id="smtp-port" type="number" value="587"></div>
+        <div class="form-row">
+          <label></label>
+          <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="smtp-tls" checked> Dùng STARTTLS (port 587)
+          </label>
+        </div>
+        <div class="form-row"><label>Email gửi</label><input class="input" id="smtp-user" placeholder="email@domain.com"></div>
+        <div class="form-row"><label>Mật khẩu</label><input class="input" id="smtp-pass" type="password" placeholder="App password"></div>
+        <div class="form-row"><label>Email nhận</label><input class="input" id="smtp-recipient" placeholder="recipient@domain.com"></div>
+      </div>
+      <div class="note muted">
+        💡 <b>Gmail:</b> Dùng App Password tại
+        <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:#58a6ff">myaccount.google.com/apppasswords</a><br>
+        Cần bật 2FA trước. Host: smtp.gmail.com | Port: 587 | TLS: ✓
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-test-email" onclick="testEmail()">📧 Gửi mail test</button>
+      <div class="row gap-6 ml-auto">
+        <button class="btn btn-ghost" onclick="closeEmailModal()">Hủy</button>
+        <button class="btn btn-primary" onclick="saveEmailConfig()">💾 Lưu cấu hình</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ALERT POPUP ═══════════════ -->
+<div id="alert-popup" class="alert-popup hidden">
+  <div class="alert-header">
+    <span style="font-size:22px">🚨</span>
+    <div>
+      <div style="color:#f85149;font-weight:700;font-size:15px">Phát hiện IP bị Blacklist!</div>
+      <div id="alert-sub" class="muted" style="font-size:12px"></div>
+    </div>
+    <button class="btn btn-icon ml-auto" onclick="closeAlert()">✕</button>
+  </div>
+  <div id="alert-body"></div>
+  <div class="row mt-8">
+    <span id="alert-countdown" class="muted" style="font-size:12px"></span>
+    <button class="btn btn-primary btn-sm ml-auto" onclick="closeAlert()">Đã hiểu</button>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "executionEnvironments": [
+    {
+      "root": "ip-blacklist-monitor"
+    }
+  ]
+}
