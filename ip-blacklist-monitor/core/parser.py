@@ -63,7 +63,7 @@ def parse_response(ip: str, data: dict) -> ParsedResult:
 
         # Xác định bị dính: nằm trong Failed array (đã là bị dính rồi)
         # Thêm kiểm tra Info "127." để lọc những entry bị timeout/error giả
-        is_listed = True  # Failed = bị dính theo MXToolbox API
+        is_listed = info.startswith("127.")
 
         if is_listed:
             is_major = any(

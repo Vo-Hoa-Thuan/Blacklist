@@ -963,9 +963,9 @@ class MainWindow(QMainWindow):
     @staticmethod
     def _make_group(title: str) -> QGroupBox:
         grp = QGroupBox(title)
-        grp.setLayout(QVBoxLayout())
-        grp.layout().setContentsMargins(10, 14, 10, 10)
-        grp.layout().setSpacing(6)
+        layout = QVBoxLayout(grp)
+        layout.setContentsMargins(10, 14, 10, 10)
+        layout.setSpacing(6)
         return grp
 
     # ──────────────────── CLOSE ────────────────────
